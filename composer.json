@@ -1,0 +1,14 @@
+{
+    "name": "b.greff/hexlet-slim-example",
+    "authors": [
+        {
+            "name": "BorisKovFG",
+            "email": "multiallin@gmail.com"
+        }
+    ],
+    "require": {
+        "slim/slim": "^4.8",
+        "slim/psr7": "^1.4",
+        "slim/http": "^1.2"
+    }
+}
