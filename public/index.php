@@ -3,9 +3,19 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Slim\Factory\AppFactory;
+use DI\Container;
+
+$container = new Container();
+$container->set('renderer', function () {
+    // Параметром передается базовая директория, в которой будут храниться шаблоны
+    return new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
+});
+$app = AppFactory::createFromContainer($container);
 
 $companies = \App\Generator::generate(100);
-$app = AppFactory::create();
+$users = \App\Generator2::generate(100);
+
+//$app = AppFactory::create();
 $app->addErrorMiddleware(true, true, true);
 
 $app->get('/', function ($request, $response) {
@@ -16,12 +26,12 @@ $app->get('/', function ($request, $response) {
 $app->get("/about", function ($request, $response) {
     return $response->write("GET /about");
 });
-$app->get('/users', function ($request, $response) {
+$app->get('/users3', function ($request, $response) {
     $page = $request->getQueryParam('page', 1);
     $per = $request->getQueryParam('per', 10);
-    return $response;
+    return $response->write("{$page} : {$per}");
 });
-$app->post('/users', function ($request, $response) {
+$app->post('/users2', function ($request, $response) {
     return $response->withStatus(302);
 });
 $app->post("/about", function ($request, $response) {
@@ -31,7 +41,56 @@ $app->get("/companies", function ($request, $response) use ($companies) {
     $page = $request->getQueryParam('page', 1);
     $per = $request->getQueryParam('per', 5);
     $interval = ($page - 1) * $per;
-    $response->getBody()->write(json_encode(array_slice($companies, $interval, $per)));
+    $slicedColl = array_slice($companies, $interval, $per);
+    $response->getBody()->write(json_encode($slicedColl));
+
     return $response;
 });
+
+$app->get("/courses/{coursesId}/lesson/{id}", function ($request, $response, array $args) {
+    $coursesId = $args['coursesId'];
+    $lessonId = $args['id'];
+    return $response->write("Course: {$coursesId}, ")
+        ->write("Lesson: {$lessonId}!!!");
+});
+
+$app->get("/companies/{id}", function ($request, $response, array $args) use ($companies) {
+    $idCompany = $args['id'];
+    $company = collect($companies)->firstWhere('id', $idCompany);
+    return ($company) ? $response->write(json_encode($company)) : $response->withStatus(404)->write('Page not found');
+});
+
+$app->get('/users2/{id}', function ($request, $response, $args) {
+    $params = ['id' => $args['id'], 'nickname' => 'user-' . $args['id']];
+    // Указанный путь считается относительно базовой директории для шаблонов, заданной на этапе конфигурации
+    // $this доступен внутри анонимной функции благодаря https://php.net/manual/ru/closure.bindto.php
+    // $this в Slim это контейнер зависимостей
+    return $this->get('renderer')->render($response, 'users/show2.phtml', $params);
+});
+
+$app->get("/company", function ($request, $response, array $args) use ($companies) {
+    $company = collect($companies)->sort();
+    //$params = ['id' => $idCompany, 'name' => $companies['name'], 'phone' => $companies['phone']];
+    $params = [
+        'companies' => $company
+    ];
+    return $this->get('renderer')->render($response, 'companies/company.phtml', $params);
+});
+
+$app->get("/users", function ($request, $response, array $args) use ($users) {
+    $params = [
+        'users' => $users
+    ];
+    return $this->get('renderer')->render($response, 'users/index.phtml', $params);
+});
+
+$app->get("/users/{id}", function ($request, $response, array $args) use ($users) {
+    $user = collect($users)->firstWhere('id', $args['id']);
+    $params = [
+        'user' => $user
+    ];
+    return $this->get('renderer')->render($response, 'users/show.phtml', $params);
+});
 $app->run();
+
+
