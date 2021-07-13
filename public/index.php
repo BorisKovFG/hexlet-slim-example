@@ -4,6 +4,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use Slim\Factory\AppFactory;
 use DI\Container;
+use function Symfony\Component\String\s;
 
 $container = new Container();
 $container->set('renderer', function () {
@@ -68,7 +69,7 @@ $app->get('/users2/{id}', function ($request, $response, $args) {
     return $this->get('renderer')->render($response, 'users/show2.phtml', $params);
 });
 
-$app->get("/company", function ($request, $response, array $args) use ($companies) {
+$app->get("/company", function ($request, $response) use ($companies) {
     $company = collect($companies)->sort();
     //$params = ['id' => $idCompany, 'name' => $companies['name'], 'phone' => $companies['phone']];
     $params = [
@@ -77,19 +78,35 @@ $app->get("/company", function ($request, $response, array $args) use ($companie
     return $this->get('renderer')->render($response, 'companies/company.phtml', $params);
 });
 
-$app->get("/users", function ($request, $response, array $args) use ($users) {
+$app->get("/users4", function ($request, $response) use ($users) {
+    $search = $request->getQueryParam('term');
+    $users = collect($users)->sort();
+    $filtered = $users->firstWhere('id', $search);
+    $users = ($filtered) ? [$filtered] : $users;
     $params = [
-        'users' => $users
+        'users' => $users,
+        'term' => $search
     ];
-    return $this->get('renderer')->render($response, 'users/index.phtml', $params);
+    return $this->get('renderer')->render($response, 'users/index4.phtml', $params);
 });
 
-$app->get("/users/{id}", function ($request, $response, array $args) use ($users) {
+$app->get("/users4/{id}", function ($request, $response, array $args) use ($users) {
     $user = collect($users)->firstWhere('id', $args['id']);
     $params = [
         'user' => $user
     ];
     return $this->get('renderer')->render($response, 'users/show.phtml', $params);
+});
+$app->get("/users", function ($request, $response) use ($users) {
+    $term = $request->getQueryParam('term');
+    $searched = collect($users)->filter(function ($user) use ($term) {
+        return (!isset($term)) ? true : s($user['firstName'])->ignoreCase()->startsWith($term);
+    });
+    $params = [
+        'searched' => $searched,
+        'term' => $term
+    ];
+    return $this->get('renderer')->render($response, 'users/index.phtml', $params);
 });
 $app->run();
 
