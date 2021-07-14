@@ -134,8 +134,11 @@ $app->get("/users/new", function ($request, $response) {
 $app->get("/users/{id}", function ($request, $response, array $args) use ($data) {
     $user = $data->read();
     $id = $args['id'];
+    if (empty($user['id']) || $user['id'] !== (int)$id) {
+        return $response->withStatus(404);
+    }
     $params = [
-        'user' => (!empty($user['id']) && $user['id'] === (int)$id) ? $user : []
+        'user' => $user
     ];
     return $this->get('renderer')->render($response, "users/index.phtml", $params);
 })->setName("user");
