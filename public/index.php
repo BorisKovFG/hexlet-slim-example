@@ -22,6 +22,7 @@ $users = \App\Generator2::generate(100);
 //$app = AppFactory::create();
 $app->addErrorMiddleware(true, true, true);
 
+
 $app->get('/', function ($request, $response) {
     $response->getBody()->write("Hello, world!!!");
     return $response;
@@ -30,17 +31,21 @@ $app->get('/', function ($request, $response) {
 $app->get("/about", function ($request, $response) {
     return $response->write("GET /about");
 });
+
 $app->get('/users3', function ($request, $response) {
     $page = $request->getQueryParam('page', 1);
     $per = $request->getQueryParam('per', 10);
     return $response->write("{$page} : {$per}");
 });
+
 $app->post('/users2', function ($request, $response) {
     return $response->withStatus(302);
 });
+
 $app->post("/about", function ($request, $response) {
     return $response->write("POST /about");
 });
+
 $app->get("/companies", function ($request, $response) use ($companies) {
     $page = $request->getQueryParam('page', 1);
     $per = $request->getQueryParam('per', 5);
@@ -111,7 +116,7 @@ $app->get("/users5", function ($request, $response) use ($users) {
     ];
     return $this->get('renderer')->render($response, 'users/index5.phtml', $params);
 });
-
+//-----------------------modificate forms, named routing, psr-7----------------------//
 $app->get("/users", function ($request, $response) use ($data) {
     $user = $data->read();
     $params = [
@@ -159,6 +164,23 @@ $app->post("/users", function ($request, $response) use ($data, $router) {
         'errors' => $errors
     ];
     return $this->get('renderer')->render($response->withStatus(422), '/users/new.phtml', $params);
+});
+//----------------------flash messages ----------------
+session_start();
+
+$container->set('flash', function () {
+    return new \Slim\Flash\Messages();
+});
+
+$app->get('/flash', function ($request, $response) {
+    $flash = $this->get('flash')->getMessages();
+    $params = ['flash' => $flash];
+    return $this->get('renderer')->render($response, 'users/flash.phtml', $params);
+});
+
+$app->post('/courses', function ($request, $response) {
+    $this->get('flash')->addMessage('success', 'Course Added');
+    return $response->withRedirect('/flash');
 });
 
 $app->run();

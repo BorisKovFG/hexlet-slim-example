@@ -1,14 +1,11 @@
 <table>
-    <?php foreach ($companies as $company): ?>
+    <?php foreach ($courses as $course): ?>
         <tr>
             <td>
-                <?= $company['id'] ?>
+                <?= $course['id'] ?>
             </td>
             <td>
-                <?= $company['name'] ?>
-            </td>
-            <td>
-                <?= $company['phone'] ?>
+                <?= $course['name'] ?>
             </td>
         </tr>
     <?php endforeach ?>
