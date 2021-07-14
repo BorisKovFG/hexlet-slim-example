@@ -8,7 +8,15 @@ use function Symfony\Component\String\s;
 use App\Validator;
 use App\Generator3;
 
+
+
 $container = new Container();
+//flash-message part
+session_start();
+$container->set('flash', function () {
+    return new \Slim\Flash\Messages();
+});
+//flash message part
 $container->set('renderer', function () {
     // Параметром передается базовая директория, в которой будут храниться шаблоны
     return new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
@@ -120,7 +128,8 @@ $app->get("/users5", function ($request, $response) use ($users) {
 $app->get("/users", function ($request, $response) use ($data) {
     $user = $data->read();
     $params = [
-        'user' => ($user) ?? []
+        'user' => ($user) ?? [],
+        'flash' =>[]
     ];
     return $this->get('renderer')->render($response, 'users/index.phtml', $params);
 })->setName("users");
@@ -142,8 +151,10 @@ $app->get("/users/{id}", function ($request, $response, array $args) use ($data)
     if (empty($user['id']) || $user['id'] !== (int)$id) {
         return $response->withStatus(404);
     }
+    $flash = $this->get('flash')->getMessages();
     $params = [
-        'user' => $user
+        'user' => $user,
+        'flash' => $flash
     ];
     return $this->get('renderer')->render($response, "users/index.phtml", $params);
 })->setName("user");
@@ -156,6 +167,7 @@ $app->post("/users", function ($request, $response) use ($data, $router) {
     $errors = $validator->validate($user);
     if (count($errors) === 0) {
         $data->save($user);
+        $this->get('flash')->addMessage('success', 'User Added');
         return $response->withRedirect($router->urlFor('user', ['id' => $user['id']]));
     }
 
@@ -166,11 +178,6 @@ $app->post("/users", function ($request, $response) use ($data, $router) {
     return $this->get('renderer')->render($response->withStatus(422), '/users/new.phtml', $params);
 });
 //----------------------flash messages ----------------
-session_start();
-
-$container->set('flash', function () {
-    return new \Slim\Flash\Messages();
-});
 
 $app->get('/flash', function ($request, $response) {
     $flash = $this->get('flash')->getMessages();
