@@ -5,6 +5,7 @@ require __DIR__ . '/../vendor/autoload.php';
 use Slim\Factory\AppFactory;
 use DI\Container;
 use function Symfony\Component\String\s;
+use App\Validator;
 
 $container = new Container();
 $container->set('renderer', function () {
@@ -12,7 +13,7 @@ $container->set('renderer', function () {
     return new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
 });
 $app = AppFactory::createFromContainer($container);
-
+$data = new \App\UserRepository();
 $companies = \App\Generator::generate(100);
 $users = \App\Generator2::generate(100);
 
@@ -97,7 +98,7 @@ $app->get("/users4/{id}", function ($request, $response, array $args) use ($user
     ];
     return $this->get('renderer')->render($response, 'users/show.phtml', $params);
 });
-$app->get("/users", function ($request, $response) use ($users) {
+$app->get("/users5", function ($request, $response) use ($users) {
     $term = $request->getQueryParam('term');
     $searched = collect($users)->filter(function ($user) use ($term) {
         return (!isset($term)) ? true : s($user['firstName'])->ignoreCase()->startsWith($term);
@@ -106,8 +107,43 @@ $app->get("/users", function ($request, $response) use ($users) {
         'searched' => $searched,
         'term' => $term
     ];
+    return $this->get('renderer')->render($response, 'users/index5.phtml', $params);
+});
+$app->get("/users", function ($request, $response) use ($data) {
+    $user = $data->read();
+    $params = [
+        'user' => ($user) ?? []
+    ];
     return $this->get('renderer')->render($response, 'users/index.phtml', $params);
 });
+$app->get("/users/new", function ($request, $response) {
+    $params = [
+        'user' => [
+            'name' => '',
+            'email' => '',
+            'city' => ''
+        ],
+        'errors' => []
+    ];
+    return $this->get('renderer')->render($response, 'users/new.phtml', $params );
+});
+$app->post("/users", function ($request, $response) use ($data) {
+    $validator = new Validator();
+    $user = $request->getParsedBodyParam('user');
+    $user['id'] = rand(0, 99);
+    $errors = $validator->validate($user);
+    if (count($errors) === 0) {
+        $data->save($user);
+        return $response->withRedirect('/users');
+    }
+
+    $params = [
+        'user' => $user,
+        'errors' => $errors
+    ];
+    return $this->get('renderer')->render($response->withStatus(422), '/users/new.phtml', $params);
+});
+
 $app->run();
 
 
