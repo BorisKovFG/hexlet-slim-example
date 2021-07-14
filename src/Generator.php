@@ -60,3 +60,17 @@ class Generator2
         return $users;
     }
 }
+
+class Generator3
+{
+    private $id;
+
+    public function __construct($min, $max)
+    {
+        $this->id = rand($min, $max);
+    }
+    public function getId()
+    {
+        return $this->id;
+    }
+}

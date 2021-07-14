@@ -6,6 +6,7 @@ use Slim\Factory\AppFactory;
 use DI\Container;
 use function Symfony\Component\String\s;
 use App\Validator;
+use App\Generator3;
 
 $container = new Container();
 $container->set('renderer', function () {
@@ -13,6 +14,7 @@ $container->set('renderer', function () {
     return new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
 });
 $app = AppFactory::createFromContainer($container);
+$router = $app->getRouteCollector()->getRouteParser();
 $data = new \App\UserRepository();
 $companies = \App\Generator::generate(100);
 $users = \App\Generator2::generate(100);
@@ -21,7 +23,7 @@ $users = \App\Generator2::generate(100);
 $app->addErrorMiddleware(true, true, true);
 
 $app->get('/', function ($request, $response) {
-    $response->getBody()->write('Hello, world!');
+    $response->getBody()->write("Hello, world!!!");
     return $response;
 });
 
@@ -109,13 +111,15 @@ $app->get("/users5", function ($request, $response) use ($users) {
     ];
     return $this->get('renderer')->render($response, 'users/index5.phtml', $params);
 });
+
 $app->get("/users", function ($request, $response) use ($data) {
     $user = $data->read();
     $params = [
         'user' => ($user) ?? []
     ];
     return $this->get('renderer')->render($response, 'users/index.phtml', $params);
-});
+})->setName("users");
+
 $app->get("/users/new", function ($request, $response) {
     $params = [
         'user' => [
@@ -125,16 +129,26 @@ $app->get("/users/new", function ($request, $response) {
         ],
         'errors' => []
     ];
-    return $this->get('renderer')->render($response, 'users/new.phtml', $params );
+    return $this->get('renderer')->render($response, 'users/new.phtml', $params);
 });
-$app->post("/users", function ($request, $response) use ($data) {
+$app->get("/users/{id}", function ($request, $response, array $args) use ($data) {
+    $user = $data->read();
+    $id = $args['id'];
+    $params = [
+        'user' => (!empty($user['id']) && $user['id'] === (int)$id) ? $user : []
+    ];
+    return $this->get('renderer')->render($response, "users/index.phtml", $params);
+})->setName("user");
+
+$app->post("/users", function ($request, $response) use ($data, $router) {
     $validator = new Validator();
+    $userId = new Generator3(0, 99);
     $user = $request->getParsedBodyParam('user');
-    $user['id'] = rand(0, 99);
+    $user['id'] = $userId->getId();
     $errors = $validator->validate($user);
     if (count($errors) === 0) {
         $data->save($user);
-        return $response->withRedirect('/users');
+        return $response->withRedirect($router->urlFor('user', ['id' => $user['id']]));
     }
 
     $params = [
